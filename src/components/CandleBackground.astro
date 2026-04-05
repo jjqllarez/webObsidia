@@ -7,536 +7,510 @@
   class="fixed top-0 left-0 -z-10 w-full h-full bg-[#010101]"></canvas>
 
 <script>
-  // ============================================================
-  // DETECTAR MÓVIL O TABLET: si es true, NO se ejecuta nada.
-  // ============================================================
-  const isMobileOrTablet =
-    /Mobi|Android|iPhone|iPad|iPod|tablet|PlayBook|Silk/i.test(
-      navigator.userAgent,
-    ) ||
-    (window.innerWidth <= 1024 &&
-      window.innerHeight <= 1024 &&
-      "ontouchstart" in window);
+  const canvas = document.getElementById("candle-canvas") as HTMLCanvasElement;
+  const ctx = canvas?.getContext("2d");
 
-  if (!isMobileOrTablet) {
-    // ===================================================================
-    // TODO EL CÓDIGO ORIGINAL (funciona perfecto en PC)
-    // ===================================================================
-    const canvas = document.getElementById(
-      "candle-canvas",
-    ) as HTMLCanvasElement;
-    const ctx = canvas?.getContext("2d");
+  // ===================================================================
+  // DETECCIÓN DE DISPOSITIVO (MÓVIL/TABLET vs PC)
+  // ===================================================================
+  const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+  const isMobileViewport = window.innerWidth < 1024;
+  const isMobile = isTouchDevice || isMobileViewport;
 
-    // ===================================================================
-    // PARÁMETROS CONFIGURABLES GENERALES (ajusta según tu preferencia)
-    // ===================================================================
+  console.log(
+    `Dispositivo detectado: ${isMobile ? "Móvil/Tablet" : "PC/Desktop"}`,
+  );
 
-    // --- IMAGEN DE FONDO ---
-    const BACKGROUND_IMAGE_ENABLED = true; // true para mostrar imagen, false para fondo negro sólido
-    const BACKGROUND_IMAGE_PATH = `${import.meta.env.BASE_URL}/fondo.png`; // ✅ Ruta dinámica con BASE_URL
-    const BACKGROUND_IMAGE_OPACITY = 0.1; // Opacidad de la imagen (0 = transparente, 1 = opaca)
+  // ===================================================================
+  // PARÁMETROS CONFIGURABLES - AJUSTES AUTOMÁTICOS POR DISPOSITIVO
+  // ===================================================================
 
-    // --- CANTIDAD Y TAMAÑO DE BURBUJAS ---
-    const BUBBLE_COUNT = 20; // Número de burbujas (max 20 si hay suficientes iconos)
-    const MIN_RADIUS = 25; // Radio mínimo en píxeles (aumenta → burbujas más grandes)
-    const MAX_RADIUS = 50; // Radio máximo en píxeles (aumenta → burbujas más grandes)
+  // --- IMAGEN DE FONDO ---
+  const BACKGROUND_IMAGE_ENABLED = true;
+  const BACKGROUND_IMAGE_PATH = `${import.meta.env.BASE_URL}/fondo.png`;
+  // En móvil reducimos opacidad para mejorar rendimiento
+  const BACKGROUND_IMAGE_OPACITY = isMobile ? 0.05 : 0.1;
 
-    // --- VELOCIDAD Y MOVIMIENTO ---
-    const SPEED_FACTOR = 2; // Multiplicador de velocidad (1 = lento, 3 = rápido)
-    const COLLISION_ITERATIONS = 3; // Iteraciones de corrección de colisiones (mayor = más precisión, pero más CPU)
+  // --- CANTIDAD Y TAMAÑO DE BURBUJAS ---
+  // En móvil: máximo 8 burbujas, en PC: 20
+  const BUBBLE_COUNT = isMobile ? 8 : 20;
+  const MIN_RADIUS = isMobile ? 20 : 25; // Más pequeñas en móvil
+  const MAX_RADIUS = isMobile ? 40 : 50;
 
-    // --- ASPECTO VISUAL (BURBUJAS) ---
-    const BUBBLE_OPACITY = 0.3; // Opacidad del círculo de fondo (0 = transparente, 1 = sólido)
-    const BUBBLE_FILL_COLOR = "rgba(20, 20, 30, 0.8)"; // Color de relleno de la burbuja
-    const BUBBLE_STROKE_COLOR = "rgba(255, 255, 255, 0.1)"; // Color del borde
-    const SHADOW_BLUR = 15; // Intensidad de la sombra (mayor = más difuminado)
-    const SHADOW_COLOR = "rgba(120, 50, 255, 0.3)"; // Color de la sombra (efecto neón)
+  // --- VELOCIDAD Y MOVIMIENTO ---
+  // En móvil reducimos velocidad para menos cálculos de colisión
+  const SPEED_FACTOR = isMobile ? 1 : 2;
+  // En móvil solo 1 iteración de colisión (vs 3 en PC)
+  const COLLISION_ITERATIONS = isMobile ? 1 : 3;
 
-    // --- ICONOS DENTRO DE LAS BURBUJAS ---
-    const ICON_SIZE_FACTOR = 1.2; // Tamaño del icono relativo al radio (1 = igual al radio, >1 más grande)
+  // --- ASPECTO VISUAL (BURBUJAS) ---
+  // En móvil reducimos opacidad y eliminamos sombras pesadas
+  const BUBBLE_OPACITY = isMobile ? 0.2 : 0.3;
+  const BUBBLE_FILL_COLOR = "rgba(20, 20, 30, 0.8)";
+  const BUBBLE_STROKE_COLOR = "rgba(255, 255, 255, 0.1)";
+  // En móvil: sin sombra (0), en PC: 15
+  const SHADOW_BLUR = isMobile ? 0 : 15;
+  const SHADOW_COLOR = "rgba(120, 50, 255, 0.3)";
 
-    // --- TEXTO (PORCENTAJE) ---
-    const TEXT_CONFIG = {
-      offsetY: 0.95, // Posición vertical: 0 = centro, 0.7 = 70% del radio hacia abajo (dentro de la burbuja)
-      fontSizeFactor: 0.4, // Tamaño de fuente = radio * este factor (0.3 → más pequeño, 0.5 → más grande)
-      fontWeight: "bold", // Peso: 'normal', 'bold', '600', etc.
-      colorPositive: "#4caf50", // Verde para ganancias
-      colorNegative: "#f44336", // Rojo para pérdidas
-      colorLoading: "#aaaaaa", // Gris para "..." mientras carga
-    };
+  // --- ICONOS DENTRO DE LAS BURBUJAS ---
+  const ICON_SIZE_FACTOR = 1.2;
 
-    // --- ACTUALIZACIÓN DE PRECIOS ---
-    const PRICE_UPDATE_INTERVAL = 3600000; // Milisegundos entre actualizaciones (3600000 = 1 hora)
-    const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"; // No cambiar
+  // --- TEXTO (PORCENTAJE) ---
+  const TEXT_CONFIG = {
+    offsetY: 0.95,
+    fontSizeFactor: 0.4,
+    fontWeight: "bold",
+    colorPositive: "#4caf50",
+    colorNegative: "#f44336",
+    colorLoading: "#aaaaaa",
+  };
 
-    // ===================================================================
-    // FIN DE PARÁMETROS CONFIGURABLES
-    // ===================================================================
+  // --- ACTUALIZACIÓN DE PRECIOS ---
+  // En móvil actualizamos cada 2 horas (ahorro de batería/datos)
+  const PRICE_UPDATE_INTERVAL = isMobile ? 7200000 : 3600000;
+  const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
 
-    let w: number, h: number;
-    let bubbles: any[] = [];
-    let backgroundImage: HTMLImageElement | null = null; // Imagen de fondo
+  // --- OPTIMIZACIONES ADICIONALES PARA MÓVIL ---
+  // Reducir FPS en móvil usando throttle
+  const TARGET_FPS = isMobile ? 30 : 60;
+  const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
-    // Cargar imagen de fondo si está habilitada
-    if (BACKGROUND_IMAGE_ENABLED) {
-      backgroundImage = new Image();
-      backgroundImage.src = BACKGROUND_IMAGE_PATH;
-      backgroundImage.crossOrigin = "anonymous"; // Opcional por si la imagen está en otro dominio
-    }
+  // ===================================================================
+  // FIN DE PARÁMETROS CONFIGURABLES
+  // ===================================================================
 
-    // Lista ampliada de criptomonedas + stablecoins
-    const cryptoIcons = [
-      {
-        name: "BTC",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/btc.png",
-      },
-      {
-        name: "ETH",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png",
-      },
-      {
-        name: "SOL",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/sol.png",
-      },
-      {
-        name: "XRP",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/xrp.png",
-      },
-      {
-        name: "ADA",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ada.png",
-      },
-      {
-        name: "BNB",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/bnb.png",
-      },
-      {
-        name: "DOT",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/dot.png",
-      },
-      {
-        name: "LTC",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ltc.png",
-      },
-      // Stablecoins
-      {
-        name: "USDT",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png",
-      },
-      {
-        name: "USDC",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdc.png",
-      },
-      {
-        name: "DAI",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/dai.png",
-      },
-      {
-        name: "MATIC",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/matic.png",
-      },
-      {
-        name: "DOGE",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/doge.png",
-      },
-      {
-        name: "AVAX",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/avax.png",
-      },
-      {
-        name: "TRX",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/trx.png",
-      },
-      {
-        name: "UNI",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/uni.png",
-      },
-      {
-        name: "LINK",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/link.png",
-      },
-      {
-        name: "ATOM",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/atom.png",
-      },
-      {
-        name: "XLM",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/xlm.png",
-      },
-      {
-        name: "VET",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/vet.png",
-      },
-      {
-        name: "FIL",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/fil.png",
-      },
-      {
-        name: "ALGO",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/algo.png",
-      },
-      {
-        name: "ETC",
-        url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/etc.png",
-      },
-    ];
+  let w: number, h: number;
+  let bubbles: any[] = [];
+  let backgroundImage: HTMLImageElement | null = null;
+  let lastFrameTime = 0;
 
-    // Stablecoins (no muestran ningún texto)
-    const stablecoins = new Set(["USDT", "USDC", "DAI", "BUSD"]);
+  // Cargar imagen de fondo
+  if (BACKGROUND_IMAGE_ENABLED) {
+    backgroundImage = new Image();
+    backgroundImage.src = BACKGROUND_IMAGE_PATH;
+    backgroundImage.crossOrigin = "anonymous";
+  }
 
-    // Almacén de imágenes válidas (solo las que cargaron correctamente)
-    let validImages: HTMLImageElement[] = [];
+  // Lista de criptomonedas (recortada si es móvil para ahorrar memoria)
+  const allCryptoIcons = [
+    {
+      name: "BTC",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/btc.png",
+    },
+    {
+      name: "ETH",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png",
+    },
+    {
+      name: "SOL",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/sol.png",
+    },
+    {
+      name: "XRP",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/xrp.png",
+    },
+    {
+      name: "ADA",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ada.png",
+    },
+    {
+      name: "BNB",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/bnb.png",
+    },
+    {
+      name: "DOT",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/dot.png",
+    },
+    {
+      name: "LTC",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ltc.png",
+    },
+    {
+      name: "USDT",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png",
+    },
+    {
+      name: "USDC",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdc.png",
+    },
+    {
+      name: "DAI",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/dai.png",
+    },
+    {
+      name: "MATIC",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/matic.png",
+    },
+    {
+      name: "DOGE",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/doge.png",
+    },
+    {
+      name: "AVAX",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/avax.png",
+    },
+    {
+      name: "LINK",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/link.png",
+    },
+    {
+      name: "UNI",
+      url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/uni.png",
+    },
+  ];
 
-    // Mapeo de nombres de iconos a IDs de CoinGecko
-    const coinGeckoIds: Record<string, string> = {
-      BTC: "bitcoin",
-      ETH: "ethereum",
-      SOL: "solana",
-      XRP: "ripple",
-      ADA: "cardano",
-      BNB: "binancecoin",
-      DOT: "polkadot",
-      LTC: "litecoin",
-      USDT: "tether",
-      USDC: "usd-coin",
-      DAI: "dai",
-      BUSD: "binance-usd",
-      MATIC: "matic-network",
-      DOGE: "dogecoin",
-      SHIB: "shiba-inu",
-      AVAX: "avalanche-2",
-      TRX: "tron",
-      UNI: "uniswap",
-      LINK: "chainlink",
-      ATOM: "cosmos",
-      XLM: "stellar",
-      VET: "vechain",
-      FIL: "filecoin",
-      ALGO: "algorand",
-      ETC: "ethereum-classic",
-    };
+  // En móvil usamos menos iconos para reducir carga de red/memoria
+  const cryptoIcons = isMobile ? allCryptoIcons.slice(0, 10) : allCryptoIcons;
 
-    // Almacén de datos de precios
-    let priceData: Record<
-      string,
-      { change24h: number | null; loading: boolean; error: boolean }
-    > = {};
+  const stablecoins = new Set(["USDT", "USDC", "DAI", "BUSD"]);
+  let validImages: HTMLImageElement[] = [];
 
-    // Inicializar datos de precios
-    cryptoIcons.forEach((icon) => {
-      priceData[icon.name] = {
-        change24h: null,
-        loading: true,
-        error: false,
-      };
+  const coinGeckoIds: Record<string, string> = {
+    BTC: "bitcoin",
+    ETH: "ethereum",
+    SOL: "solana",
+    XRP: "ripple",
+    ADA: "cardano",
+    BNB: "binancecoin",
+    DOT: "polkadot",
+    LTC: "litecoin",
+    USDT: "tether",
+    USDC: "usd-coin",
+    DAI: "dai",
+    MATIC: "matic-network",
+    DOGE: "dogecoin",
+    AVAX: "avalanche-2",
+    LINK: "chainlink",
+    UNI: "uniswap",
+  };
+
+  let priceData: Record<
+    string,
+    { change24h: number | null; loading: boolean; error: boolean }
+  > = {};
+
+  cryptoIcons.forEach((icon) => {
+    priceData[icon.name] = { change24h: null, loading: true, error: false };
+  });
+
+  async function loadImages(): Promise<void> {
+    const promises = cryptoIcons.map((icon) => {
+      return new Promise<HTMLImageElement | null>((resolve) => {
+        const img = new Image();
+        img.src = icon.url;
+        // En móvil no forzamos carga sincrónica pesada
+        if (isMobile) {
+          img.loading = "lazy";
+        }
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+      });
     });
 
-    // Cargar imágenes y filtrar las que fallan
-    async function loadImages(): Promise<void> {
-      const promises = cryptoIcons.map((icon) => {
-        return new Promise<HTMLImageElement | null>((resolve) => {
-          const img = new Image();
-          img.src = icon.url;
-          img.onload = () => resolve(img);
-          img.onerror = () => resolve(null);
-        });
+    const results = await Promise.all(promises);
+    validImages = results.filter(
+      (img): img is HTMLImageElement => img !== null,
+    );
+    console.log(
+      `Imágenes válidas: ${validImages.length} de ${cryptoIcons.length}`,
+    );
+    init();
+  }
+
+  function shuffleArray<T>(array: T[]): T[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function init() {
+    if (!canvas || !ctx) return;
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    bubbles = [];
+
+    const availableCount = Math.min(BUBBLE_COUNT, validImages.length);
+    if (availableCount === 0) {
+      console.error("No hay imágenes válidas para mostrar");
+      return;
+    }
+
+    const shuffled = shuffleArray([...validImages]);
+    const selectedImages = shuffled.slice(0, availableCount);
+
+    for (let i = 0; i < availableCount; i++) {
+      const radius = Math.random() * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS;
+      const imgSrc = selectedImages[i].src;
+      const iconEntry = cryptoIcons.find((icon) => icon.url === imgSrc);
+      const coinName = iconEntry ? iconEntry.name : "UNKNOWN";
+
+      bubbles.push({
+        x: Math.random() * (w - radius * 2) + radius,
+        y: Math.random() * (h - radius * 2) + radius,
+        radius: radius,
+        vx: (Math.random() - 0.5) * SPEED_FACTOR,
+        vy: (Math.random() - 0.5) * SPEED_FACTOR,
+        img: selectedImages[i],
+        coinName: coinName,
+        opacity: BUBBLE_OPACITY,
+      });
+    }
+
+    fetchPriceChanges();
+  }
+
+  async function fetchPriceChanges() {
+    try {
+      const activeCoins = bubbles.map((b) => b.coinName);
+      const uniqueCoins = [...new Set(activeCoins)];
+      const coinsToFetch = uniqueCoins.filter(
+        (name) => coinGeckoIds[name] && !stablecoins.has(name),
+      );
+
+      if (coinsToFetch.length === 0) return;
+
+      const ids = coinsToFetch.map((name) => coinGeckoIds[name]).join(",");
+      const url = `${COINGECKO_API_URL}?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+
+      const response = await fetch(url);
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+
+      coinsToFetch.forEach((coinName) => {
+        const geckoId = coinGeckoIds[coinName];
+        if (data[geckoId] && data[geckoId].usd_24h_change !== undefined) {
+          priceData[coinName] = {
+            change24h: data[geckoId].usd_24h_change,
+            loading: false,
+            error: false,
+          };
+        } else {
+          priceData[coinName] = {
+            ...priceData[coinName],
+            loading: false,
+            error: true,
+          };
+        }
       });
 
-      const results = await Promise.all(promises);
-      validImages = results.filter(
-        (img): img is HTMLImageElement => img !== null,
-      );
-      console.log(
-        `Imágenes válidas: ${validImages.length} de ${cryptoIcons.length}`,
-      );
+      stablecoins.forEach((coin) => {
+        if (priceData[coin]) {
+          priceData[coin].loading = false;
+          priceData[coin].error = false;
+        }
+      });
 
-      // Iniciar la creación de burbujas una vez que las imágenes están listas
-      init();
+      console.log("Precios actualizados:", new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error("Error fetching price data:", error);
+      bubbles.forEach((b) => {
+        if (!stablecoins.has(b.coinName) && priceData[b.coinName]) {
+          priceData[b.coinName].loading = false;
+          priceData[b.coinName].error = true;
+        }
+      });
     }
+  }
 
-    // Función para barajar un array (Fisher-Yates)
-    function shuffleArray<T>(array: T[]): T[] {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+  function handleBubbleCollisions() {
+    for (let iter = 0; iter < COLLISION_ITERATIONS; iter++) {
+      for (let i = 0; i < bubbles.length; i++) {
+        for (let j = i + 1; j < bubbles.length; j++) {
+          const b1 = bubbles[i];
+          const b2 = bubbles[j];
+          const dx = b2.x - b1.x;
+          const dy = b2.y - b1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = b1.radius + b2.radius;
+
+          if (dist < minDist && dist > 0) {
+            // Evitar división por cero
+            const m1 = b1.radius * b1.radius;
+            const m2 = b2.radius * b2.radius;
+            const totalMass = m1 + m2;
+
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            const vx = b2.vx - b1.vx;
+            const vy = b2.vy - b1.vy;
+            const velAlong = vx * nx + vy * ny;
+
+            if (velAlong > 0) continue;
+
+            const impulse = (2 * velAlong) / totalMass;
+
+            b1.vx += impulse * m2 * nx;
+            b1.vy += impulse * m2 * ny;
+            b2.vx -= impulse * m1 * nx;
+            b2.vy -= impulse * m1 * ny;
+
+            const overlap = minDist - dist;
+            const correction = overlap / 2;
+            b1.x -= nx * correction;
+            b1.y -= ny * correction;
+            b2.x += nx * correction;
+            b2.y += ny * correction;
+          }
+        }
       }
-      return array;
     }
+  }
 
-    function init() {
-      if (!canvas || !ctx) return;
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-      bubbles = [];
+  // Variable para control de FPS en móvil
+  let animationId: number;
 
-      // Si no hay suficientes imágenes válidas, ajustamos BUBBLE_COUNT
-      const availableCount = Math.min(BUBBLE_COUNT, validImages.length);
-      if (availableCount === 0) {
-        console.error("No hay imágenes válidas para mostrar");
+  function draw(currentTime: number) {
+    if (!ctx) return;
+
+    // Throttle FPS en móvil
+    if (isMobile) {
+      const deltaTime = currentTime - lastFrameTime;
+      if (deltaTime < FRAME_INTERVAL) {
+        animationId = requestAnimationFrame(draw);
         return;
       }
-
-      // Seleccionar imágenes únicas al azar
-      const shuffled = shuffleArray([...validImages]);
-      const selectedImages = shuffled.slice(0, availableCount);
-
-      for (let i = 0; i < availableCount; i++) {
-        const radius = Math.random() * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS;
-        // Encontrar el nombre de la criptomoneda para esta imagen
-        const imgSrc = selectedImages[i].src;
-        const iconEntry = cryptoIcons.find((icon) => icon.url === imgSrc);
-        const coinName = iconEntry ? iconEntry.name : "UNKNOWN";
-
-        bubbles.push({
-          x: Math.random() * (w - radius * 2) + radius,
-          y: Math.random() * (h - radius * 2) + radius,
-          radius: radius,
-          vx: (Math.random() - 0.5) * SPEED_FACTOR,
-          vy: (Math.random() - 0.5) * SPEED_FACTOR,
-          img: selectedImages[i],
-          coinName: coinName,
-          opacity: BUBBLE_OPACITY,
-        });
-      }
-
-      // Iniciar la carga de precios
-      fetchPriceChanges();
+      lastFrameTime = currentTime;
     }
 
-    // Obtener datos de precios de CoinGecko
-    async function fetchPriceChanges() {
-      try {
-        const activeCoins = bubbles.map((b) => b.coinName);
-        const uniqueCoins = [...new Set(activeCoins)];
-        const coinsToFetch = uniqueCoins.filter(
-          (name) => coinGeckoIds[name] && !stablecoins.has(name),
-        );
+    ctx.clearRect(0, 0, w, h);
 
-        if (coinsToFetch.length === 0) return;
-
-        const ids = coinsToFetch.map((name) => coinGeckoIds[name]).join(",");
-        const url = `${COINGECKO_API_URL}?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        coinsToFetch.forEach((coinName) => {
-          const geckoId = coinGeckoIds[coinName];
-          if (data[geckoId] && data[geckoId].usd_24h_change !== undefined) {
-            priceData[coinName] = {
-              change24h: data[geckoId].usd_24h_change,
-              loading: false,
-              error: false,
-            };
-          } else {
-            // Marcar error si no hay datos
-            priceData[coinName] = {
-              ...priceData[coinName],
-              loading: false,
-              error: true,
-            };
-          }
-        });
-
-        // Las stablecoins se marcan como cargadas sin error (no necesitan fetch)
-        stablecoins.forEach((coin) => {
-          if (priceData[coin]) {
-            priceData[coin].loading = false;
-            priceData[coin].error = false;
-          }
-        });
-
-        console.log("Precios actualizados:", new Date().toLocaleTimeString());
-      } catch (error) {
-        console.error("Error fetching price data:", error);
-        // En caso de error global, marcar todas las monedas volátiles como error
-        bubbles.forEach((b) => {
-          if (!stablecoins.has(b.coinName) && priceData[b.coinName]) {
-            priceData[b.coinName].loading = false;
-            priceData[b.coinName].error = true;
-          }
-        });
-      }
+    // Dibujar imagen de fondo
+    if (
+      BACKGROUND_IMAGE_ENABLED &&
+      backgroundImage &&
+      backgroundImage.complete
+    ) {
+      ctx.save();
+      ctx.globalAlpha = BACKGROUND_IMAGE_OPACITY;
+      ctx.drawImage(backgroundImage, 0, 0, w, h);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#010101";
+      ctx.fillRect(0, 0, w, h);
     }
 
-    function handleBubbleCollisions() {
-      for (let iter = 0; iter < COLLISION_ITERATIONS; iter++) {
-        for (let i = 0; i < bubbles.length; i++) {
-          for (let j = i + 1; j < bubbles.length; j++) {
-            const b1 = bubbles[i];
-            const b2 = bubbles[j];
-            const dx = b2.x - b1.x;
-            const dy = b2.y - b1.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const minDist = b1.radius + b2.radius;
-
-            if (dist < minDist) {
-              const m1 = b1.radius * b1.radius;
-              const m2 = b2.radius * b2.radius;
-              const totalMass = m1 + m2;
-
-              const nx = dx / dist;
-              const ny = dy / dist;
-
-              const vx = b2.vx - b1.vx;
-              const vy = b2.vy - b1.vy;
-              const velAlong = vx * nx + vy * ny;
-
-              if (velAlong > 0) continue;
-
-              const impulse = (2 * velAlong) / totalMass;
-
-              b1.vx += impulse * m2 * nx;
-              b1.vy += impulse * m2 * ny;
-              b2.vx -= impulse * m1 * nx;
-              b2.vy -= impulse * m1 * ny;
-
-              const overlap = minDist - dist;
-              const correction = overlap / 2;
-              b1.x -= nx * correction;
-              b1.y -= ny * correction;
-              b2.x += nx * correction;
-              b2.y += ny * correction;
-            }
-          }
-        }
-      }
-    }
-
-    function draw() {
-      if (!ctx) return;
-
-      // Limpiar el canvas
-      ctx.clearRect(0, 0, w, h);
-
-      // Dibujar imagen de fondo si está habilitada y cargada
-      if (
-        BACKGROUND_IMAGE_ENABLED &&
-        backgroundImage &&
-        backgroundImage.complete
-      ) {
-        ctx.save();
-        ctx.globalAlpha = BACKGROUND_IMAGE_OPACITY; // Aplicar opacidad configurada
-        ctx.drawImage(backgroundImage, 0, 0, w, h); // Escalar para llenar el canvas
-        ctx.restore();
-      } else {
-        // Si no hay imagen, fondo negro sólido
-        ctx.fillStyle = "#010101";
-        ctx.fillRect(0, 0, w, h);
-      }
-
-      // Dibujar burbujas
-      bubbles.forEach((b) => {
-        b.x += b.vx;
-        b.y += b.vy;
-      });
-
-      handleBubbleCollisions();
-
-      bubbles.forEach((b) => {
-        if (b.x + b.radius > w) {
-          b.x = w - b.radius;
-          b.vx *= -1;
-        } else if (b.x - b.radius < 0) {
-          b.x = b.radius;
-          b.vx *= -1;
-        }
-        if (b.y + b.radius > h) {
-          b.y = h - b.radius;
-          b.vy *= -1;
-        } else if (b.y - b.radius < 0) {
-          b.y = b.radius;
-          b.vy *= -1;
-        }
-      });
-
-      bubbles.forEach((b) => {
-        ctx.save();
-        ctx.globalAlpha = b.opacity;
-
-        ctx.shadowBlur = SHADOW_BLUR;
-        ctx.shadowColor = SHADOW_COLOR;
-
-        // Círculo de fondo
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fillStyle = BUBBLE_FILL_COLOR;
-        ctx.fill();
-        ctx.strokeStyle = BUBBLE_STROKE_COLOR;
-        ctx.stroke();
-
-        // Dibujar Logo centrado
-        if (b.img.complete) {
-          const iconSize = b.radius * ICON_SIZE_FACTOR;
-          ctx.drawImage(
-            b.img,
-            b.x - iconSize / 2,
-            b.y - iconSize / 2,
-            iconSize,
-            iconSize,
-          );
-        }
-
-        // --- DIBUJAR TEXTO SOLO SI CORRESPONDE ---
-        let displayText: string | null = null;
-        let textColor = TEXT_CONFIG.colorLoading;
-
-        if (!stablecoins.has(b.coinName)) {
-          const coinPrice = priceData[b.coinName];
-          if (coinPrice) {
-            if (coinPrice.loading) {
-              displayText = "...";
-            } else if (!coinPrice.error && coinPrice.change24h !== null) {
-              const change = coinPrice.change24h;
-              displayText = `${change > 0 ? "+" : ""}${change.toFixed(2)}%`;
-              textColor =
-                change >= 0
-                  ? TEXT_CONFIG.colorPositive
-                  : TEXT_CONFIG.colorNegative;
-            }
-            // Si tiene error o no hay datos, no se muestra nada
-          }
-        }
-
-        if (displayText) {
-          const fontSize = b.radius * TEXT_CONFIG.fontSizeFactor;
-          ctx.font = `${TEXT_CONFIG.fontWeight} ${fontSize}px 'Inter', 'Segoe UI', system-ui, sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-          ctx.fillStyle = textColor;
-
-          const textY = b.y + b.radius * TEXT_CONFIG.offsetY;
-          ctx.fillText(displayText, b.x, textY);
-        }
-
-        ctx.restore();
-      });
-
-      requestAnimationFrame(draw);
-    }
-
-    // Iniciar carga de imágenes (luego llama a init)
-    loadImages();
-
-    // Eventos
-    window.addEventListener("resize", () => {
-      init();
+    // Actualizar posiciones
+    bubbles.forEach((b) => {
+      b.x += b.vx;
+      b.y += b.vy;
     });
 
-    // Actualizar precios cada hora (configurable)
-    setInterval(fetchPriceChanges, PRICE_UPDATE_INTERVAL);
+    handleBubbleCollisions();
 
-    // También actualizar cuando la ventana recupere el foco
-    window.addEventListener("focus", fetchPriceChanges);
+    // Colisiones con bordes
+    bubbles.forEach((b) => {
+      if (b.x + b.radius > w) {
+        b.x = w - b.radius;
+        b.vx *= -1;
+      } else if (b.x - b.radius < 0) {
+        b.x = b.radius;
+        b.vx *= -1;
+      }
+      if (b.y + b.radius > h) {
+        b.y = h - b.radius;
+        b.vy *= -1;
+      } else if (b.y - b.radius < 0) {
+        b.y = b.radius;
+        b.vy *= -1;
+      }
+    });
 
-    // Iniciar animación (draw se llama recursivamente)
-    draw();
+    // Dibujar burbujas
+    bubbles.forEach((b) => {
+      ctx.save();
+      ctx.globalAlpha = b.opacity;
+
+      // Solo aplicar sombra en PC (en móvil SHADOW_BLUR es 0)
+      if (SHADOW_BLUR > 0) {
+        ctx.shadowBlur = SHADOW_BLUR;
+        ctx.shadowColor = SHADOW_COLOR;
+      }
+
+      // Círculo de fondo
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fillStyle = BUBBLE_FILL_COLOR;
+      ctx.fill();
+      ctx.strokeStyle = BUBBLE_STROKE_COLOR;
+      ctx.stroke();
+
+      // Dibujar Logo
+      if (b.img.complete) {
+        const iconSize = b.radius * ICON_SIZE_FACTOR;
+        ctx.drawImage(
+          b.img,
+          b.x - iconSize / 2,
+          b.y - iconSize / 2,
+          iconSize,
+          iconSize,
+        );
+      }
+
+      // Dibujar texto de porcentaje
+      let displayText: string | null = null;
+      let textColor = TEXT_CONFIG.colorLoading;
+
+      if (!stablecoins.has(b.coinName)) {
+        const coinPrice = priceData[b.coinName];
+        if (coinPrice) {
+          if (coinPrice.loading) {
+            displayText = "...";
+          } else if (!coinPrice.error && coinPrice.change24h !== null) {
+            const change = coinPrice.change24h;
+            displayText = `${change > 0 ? "+" : ""}${change.toFixed(2)}%`;
+            textColor =
+              change >= 0
+                ? TEXT_CONFIG.colorPositive
+                : TEXT_CONFIG.colorNegative;
+          }
+        }
+      }
+
+      if (displayText) {
+        const fontSize = b.radius * TEXT_CONFIG.fontSizeFactor;
+        ctx.font = `${TEXT_CONFIG.fontWeight} ${fontSize}px 'Inter', 'Segoe UI', system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        // En móvil simplificamos sombra de texto
+        if (!isMobile) {
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+        }
+
+        ctx.fillStyle = textColor;
+        const textY = b.y + b.radius * TEXT_CONFIG.offsetY;
+        ctx.fillText(displayText, b.x, textY);
+      }
+
+      ctx.restore();
+    });
+
+    animationId = requestAnimationFrame(draw);
   }
+
+  // Iniciar
+  loadImages();
+
+  // Eventos
+  window.addEventListener("resize", () => {
+    // Debounce resize en móvil para evitar recálculos excesivos
+    if (isMobile) {
+      clearTimeout((window as any).resizeTimeout);
+      (window as any).resizeTimeout = setTimeout(init, 250);
+    } else {
+      init();
+    }
+  });
+
+  setInterval(fetchPriceChanges, PRICE_UPDATE_INTERVAL);
+  window.addEventListener("focus", fetchPriceChanges);
+
+  // Iniciar animación
+  draw(0);
 </script>
