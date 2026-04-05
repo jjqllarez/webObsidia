@@ -7,67 +7,44 @@
   class="fixed top-0 left-0 -z-10 w-full h-full bg-[#010101]"></canvas>
 
 <script>
-  const canvas = document.getElementById("candle-canvas") as HTMLCanvasElement;
+  const canvas = document.getElementById("candle-canvas");
   const ctx = canvas?.getContext("2d");
 
-  // ===================================================================
-  // PARÁMETROS CONFIGURABLES GENERALES (ajusta según tu preferencia)
-  // ===================================================================
+  // ========== DETECTAR DISPOSITIVO MÓVIL ==========
+  const isMobile =
+    /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    window.innerWidth < 768;
+  console.log("Modo móvil activado:", isMobile);
 
-  // --- IMAGEN DE FONDO ---
-  const BACKGROUND_IMAGE_ENABLED = true; // true para mostrar imagen, false para fondo negro sólido
-  const BACKGROUND_IMAGE_PATH = `${import.meta.env.BASE_URL}/fondo.png`; // ✅ Ruta dinámica con BASE_URL
-  const BACKGROUND_IMAGE_OPACITY = 0.1; // Opacidad de la imagen (0 = transparente, 1 = opaca)
-
-  // --- CANTIDAD Y TAMAÑO DE BURBUJAS ---
-  const BUBBLE_COUNT = 20; // Número de burbujas (max 20 si hay suficientes iconos)
-  const MIN_RADIUS = 25; // Radio mínimo en píxeles (aumenta → burbujas más grandes)
-  const MAX_RADIUS = 50; // Radio máximo en píxeles (aumenta → burbujas más grandes)
-
-  // --- VELOCIDAD Y MOVIMIENTO ---
-  const SPEED_FACTOR = 2; // Multiplicador de velocidad (1 = lento, 3 = rápido)
-  const COLLISION_ITERATIONS = 3; // Iteraciones de corrección de colisiones (mayor = más precisión, pero más CPU)
-
-  // --- ASPECTO VISUAL (BURBUJAS) ---
-  const BUBBLE_OPACITY = 0.3; // Opacidad del círculo de fondo (0 = transparente, 1 = sólido)
-  const BUBBLE_FILL_COLOR = "rgba(20, 20, 30, 0.8)"; // Color de relleno de la burbuja
-  const BUBBLE_STROKE_COLOR = "rgba(255, 255, 255, 0.1)"; // Color del borde
-  const SHADOW_BLUR = 15; // Intensidad de la sombra (mayor = más difuminado)
-  const SHADOW_COLOR = "rgba(120, 50, 255, 0.3)"; // Color de la sombra (efecto neón)
-
-  // --- ICONOS DENTRO DE LAS BURBUJAS ---
-  const ICON_SIZE_FACTOR = 1.2; // Tamaño del icono relativo al radio (1 = igual al radio, >1 más grande)
-
-  // --- TEXTO (PORCENTAJE) ---
-  const TEXT_CONFIG = {
-    offsetY: 0.95, // Posición vertical: 0 = centro, 0.7 = 70% del radio hacia abajo (dentro de la burbuja)
-    fontSizeFactor: 0.4, // Tamaño de fuente = radio * este factor (0.3 → más pequeño, 0.5 → más grande)
-    fontWeight: "bold", // Peso: 'normal', 'bold', '600', etc.
-    colorPositive: "#4caf50", // Verde para ganancias
-    colorNegative: "#f44336", // Rojo para pérdidas
-    colorLoading: "#aaaaaa", // Gris para "..." mientras carga
+  // ========== PARÁMETROS CONFIGURABLES (se ajustan automáticamente en móvil) ==========
+  const BASE_CONFIG = {
+    BACKGROUND_IMAGE_ENABLED: true,
+    BACKGROUND_IMAGE_PATH: `${import.meta.env.BASE_URL}/fondo.png`,
+    BACKGROUND_IMAGE_OPACITY: 0.1,
+    MIN_RADIUS: 25,
+    MAX_RADIUS: 50,
+    SPEED_FACTOR: isMobile ? 1.2 : 2,
+    COLLISION_ITERATIONS: isMobile ? 1 : 3,
+    BUBBLE_OPACITY: 0.3,
+    BUBBLE_FILL_COLOR: "rgba(20, 20, 30, 0.8)",
+    BUBBLE_STROKE_COLOR: "rgba(255, 255, 255, 0.1)",
+    SHADOW_BLUR: isMobile ? 0 : 15,
+    SHADOW_COLOR: "rgba(120, 50, 255, 0.3)",
+    ICON_SIZE_FACTOR: 1.2,
+    TEXT_CONFIG: {
+      offsetY: 0.95,
+      fontSizeFactor: 0.4,
+      fontWeight: "bold",
+      colorPositive: "#81c784",
+      colorNegative: "#e57373",
+      colorLoading: "#aaaaaa",
+    },
+    PRICE_UPDATE_INTERVAL: 3600000,
+    COINGECKO_API_URL: "https://api.coingecko.com/api/v3/simple/price",
+    BUBBLE_COUNT: isMobile ? 8 : 20,
   };
 
-  // --- ACTUALIZACIÓN DE PRECIOS ---
-  const PRICE_UPDATE_INTERVAL = 3600000; // Milisegundos entre actualizaciones (3600000 = 1 hora)
-  const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"; // No cambiar
-
-  // ===================================================================
-  // FIN DE PARÁMETROS CONFIGURABLES
-  // ===================================================================
-
-  let w: number, h: number;
-  let bubbles: any[] = [];
-  let backgroundImage: HTMLImageElement | null = null; // Imagen de fondo
-
-  // Cargar imagen de fondo si está habilitada
-  if (BACKGROUND_IMAGE_ENABLED) {
-    backgroundImage = new Image();
-    backgroundImage.src = BACKGROUND_IMAGE_PATH;
-    backgroundImage.crossOrigin = "anonymous"; // Opcional por si la imagen está en otro dominio
-  }
-
-  // Lista ampliada de criptomonedas + stablecoins
+  // ========== TU LISTA ORIGINAL DE CRYPTO ICONOS ==========
   const cryptoIcons = [
     {
       name: "BTC",
@@ -101,7 +78,6 @@
       name: "LTC",
       url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ltc.png",
     },
-    // Stablecoins
     {
       name: "USDT",
       url: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png",
@@ -164,14 +140,10 @@
     },
   ];
 
-  // Stablecoins (no muestran ningún texto)
   const stablecoins = new Set(["USDT", "USDC", "DAI", "BUSD"]);
+  let validImages = [];
 
-  // Almacén de imágenes válidas (solo las que cargaron correctamente)
-  let validImages: HTMLImageElement[] = [];
-
-  // Mapeo de nombres de iconos a IDs de CoinGecko
-  const coinGeckoIds: Record<string, string> = {
+  const coinGeckoIds = {
     BTC: "bitcoin",
     ETH: "ethereum",
     SOL: "solana",
@@ -199,13 +171,7 @@
     ETC: "ethereum-classic",
   };
 
-  // Almacén de datos de precios
-  let priceData: Record<
-    string,
-    { change24h: number | null; loading: boolean; error: boolean }
-  > = {};
-
-  // Inicializar datos de precios
+  let priceData = {};
   cryptoIcons.forEach((icon) => {
     priceData[icon.name] = {
       change24h: null,
@@ -214,31 +180,37 @@
     };
   });
 
-  // Cargar imágenes y filtrar las que fallan
-  async function loadImages(): Promise<void> {
+  let w, h;
+  let bubbles = [];
+  let backgroundImage = null;
+  if (BASE_CONFIG.BACKGROUND_IMAGE_ENABLED) {
+    backgroundImage = new Image();
+    backgroundImage.src = BASE_CONFIG.BACKGROUND_IMAGE_PATH;
+  }
+
+  // ========== LIMITAR FRAMERATE EN MÓVIL (30 fps) ==========
+  let lastFrameTime = 0;
+  const TARGET_FPS = isMobile ? 30 : 60;
+  const FRAME_INTERVAL = 1000 / TARGET_FPS;
+
+  async function loadImages() {
     const promises = cryptoIcons.map((icon) => {
-      return new Promise<HTMLImageElement | null>((resolve) => {
+      return new Promise((resolve) => {
         const img = new Image();
         img.src = icon.url;
         img.onload = () => resolve(img);
         img.onerror = () => resolve(null);
       });
     });
-
     const results = await Promise.all(promises);
-    validImages = results.filter(
-      (img): img is HTMLImageElement => img !== null,
-    );
+    validImages = results.filter((img) => img !== null);
     console.log(
       `Imágenes válidas: ${validImages.length} de ${cryptoIcons.length}`,
     );
-
-    // Iniciar la creación de burbujas una vez que las imágenes están listas
     init();
   }
 
-  // Función para barajar un array (Fisher-Yates)
-  function shuffleArray<T>(array: T[]): T[] {
+  function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
@@ -252,41 +224,39 @@
     h = canvas.height = window.innerHeight;
     bubbles = [];
 
-    // Si no hay suficientes imágenes válidas, ajustamos BUBBLE_COUNT
-    const availableCount = Math.min(BUBBLE_COUNT, validImages.length);
+    const availableCount = Math.min(
+      BASE_CONFIG.BUBBLE_COUNT,
+      validImages.length,
+    );
     if (availableCount === 0) {
       console.error("No hay imágenes válidas para mostrar");
       return;
     }
 
-    // Seleccionar imágenes únicas al azar
     const shuffled = shuffleArray([...validImages]);
     const selectedImages = shuffled.slice(0, availableCount);
 
     for (let i = 0; i < availableCount; i++) {
-      const radius = Math.random() * (MAX_RADIUS - MIN_RADIUS) + MIN_RADIUS;
-      // Encontrar el nombre de la criptomoneda para esta imagen
+      const radius =
+        Math.random() * (BASE_CONFIG.MAX_RADIUS - BASE_CONFIG.MIN_RADIUS) +
+        BASE_CONFIG.MIN_RADIUS;
       const imgSrc = selectedImages[i].src;
       const iconEntry = cryptoIcons.find((icon) => icon.url === imgSrc);
       const coinName = iconEntry ? iconEntry.name : "UNKNOWN";
-
       bubbles.push({
         x: Math.random() * (w - radius * 2) + radius,
         y: Math.random() * (h - radius * 2) + radius,
         radius: radius,
-        vx: (Math.random() - 0.5) * SPEED_FACTOR,
-        vy: (Math.random() - 0.5) * SPEED_FACTOR,
+        vx: (Math.random() - 0.5) * BASE_CONFIG.SPEED_FACTOR,
+        vy: (Math.random() - 0.5) * BASE_CONFIG.SPEED_FACTOR,
         img: selectedImages[i],
         coinName: coinName,
-        opacity: BUBBLE_OPACITY,
+        opacity: BASE_CONFIG.BUBBLE_OPACITY,
       });
     }
-
-    // Iniciar la carga de precios
     fetchPriceChanges();
   }
 
-  // Obtener datos de precios de CoinGecko
   async function fetchPriceChanges() {
     try {
       const activeCoins = bubbles.map((b) => b.coinName);
@@ -294,20 +264,13 @@
       const coinsToFetch = uniqueCoins.filter(
         (name) => coinGeckoIds[name] && !stablecoins.has(name),
       );
-
       if (coinsToFetch.length === 0) return;
-
       const ids = coinsToFetch.map((name) => coinGeckoIds[name]).join(",");
-      const url = `${COINGECKO_API_URL}?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
-
+      const url = `${BASE_CONFIG.COINGECKO_API_URL}?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
       const response = await fetch(url);
-
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
-
       coinsToFetch.forEach((coinName) => {
         const geckoId = coinGeckoIds[coinName];
         if (data[geckoId] && data[geckoId].usd_24h_change !== undefined) {
@@ -317,7 +280,6 @@
             error: false,
           };
         } else {
-          // Marcar error si no hay datos
           priceData[coinName] = {
             ...priceData[coinName],
             loading: false,
@@ -325,19 +287,12 @@
           };
         }
       });
-
-      // Las stablecoins se marcan como cargadas sin error (no necesitan fetch)
       stablecoins.forEach((coin) => {
-        if (priceData[coin]) {
-          priceData[coin].loading = false;
-          priceData[coin].error = false;
-        }
+        if (priceData[coin]) priceData[coin].loading = false;
       });
-
       console.log("Precios actualizados:", new Date().toLocaleTimeString());
     } catch (error) {
       console.error("Error fetching price data:", error);
-      // En caso de error global, marcar todas las monedas volátiles como error
       bubbles.forEach((b) => {
         if (!stablecoins.has(b.coinName) && priceData[b.coinName]) {
           priceData[b.coinName].loading = false;
@@ -348,7 +303,8 @@
   }
 
   function handleBubbleCollisions() {
-    for (let iter = 0; iter < COLLISION_ITERATIONS; iter++) {
+    if (BASE_CONFIG.COLLISION_ITERATIONS === 0) return;
+    for (let iter = 0; iter < BASE_CONFIG.COLLISION_ITERATIONS; iter++) {
       for (let i = 0; i < bubbles.length; i++) {
         for (let j = i + 1; j < bubbles.length; j++) {
           const b1 = bubbles[i];
@@ -357,28 +313,21 @@
           const dy = b2.y - b1.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const minDist = b1.radius + b2.radius;
-
           if (dist < minDist) {
             const m1 = b1.radius * b1.radius;
             const m2 = b2.radius * b2.radius;
             const totalMass = m1 + m2;
-
             const nx = dx / dist;
             const ny = dy / dist;
-
             const vx = b2.vx - b1.vx;
             const vy = b2.vy - b1.vy;
             const velAlong = vx * nx + vy * ny;
-
             if (velAlong > 0) continue;
-
             const impulse = (2 * velAlong) / totalMass;
-
             b1.vx += impulse * m2 * nx;
             b1.vy += impulse * m2 * ny;
             b2.vx -= impulse * m1 * nx;
             b2.vy -= impulse * m1 * ny;
-
             const overlap = minDist - dist;
             const correction = overlap / 2;
             b1.x -= nx * correction;
@@ -391,37 +340,38 @@
     }
   }
 
-  function draw() {
+  function draw(now) {
+    if (isMobile) {
+      if (now - lastFrameTime < FRAME_INTERVAL) {
+        requestAnimationFrame(draw);
+        return;
+      }
+      lastFrameTime = now;
+    }
+
     if (!ctx) return;
 
-    // Limpiar el canvas
     ctx.clearRect(0, 0, w, h);
-
-    // Dibujar imagen de fondo si está habilitada y cargada
     if (
-      BACKGROUND_IMAGE_ENABLED &&
+      BASE_CONFIG.BACKGROUND_IMAGE_ENABLED &&
       backgroundImage &&
       backgroundImage.complete
     ) {
-      ctx.save();
-      ctx.globalAlpha = BACKGROUND_IMAGE_OPACITY; // Aplicar opacidad configurada
-      ctx.drawImage(backgroundImage, 0, 0, w, h); // Escalar para llenar el canvas
-      ctx.restore();
+      ctx.globalAlpha = BASE_CONFIG.BACKGROUND_IMAGE_OPACITY;
+      ctx.drawImage(backgroundImage, 0, 0, w, h);
+      ctx.globalAlpha = 1;
     } else {
-      // Si no hay imagen, fondo negro sólido
       ctx.fillStyle = "#010101";
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Dibujar burbujas
-    bubbles.forEach((b) => {
+    for (let b of bubbles) {
       b.x += b.vx;
       b.y += b.vy;
-    });
-
+    }
     handleBubbleCollisions();
 
-    bubbles.forEach((b) => {
+    for (let b of bubbles) {
       if (b.x + b.radius > w) {
         b.x = w - b.radius;
         b.vx *= -1;
@@ -436,26 +386,26 @@
         b.y = b.radius;
         b.vy *= -1;
       }
-    });
+    }
 
-    bubbles.forEach((b) => {
-      ctx.save();
-      ctx.globalAlpha = b.opacity;
+    // Configuración global (sombra, trazo) – el relleno se asignará dentro del bucle
+    ctx.shadowBlur = BASE_CONFIG.SHADOW_BLUR;
+    ctx.shadowColor = BASE_CONFIG.SHADOW_COLOR;
+    ctx.strokeStyle = BASE_CONFIG.BUBBLE_STROKE_COLOR;
 
-      ctx.shadowBlur = SHADOW_BLUR;
-      ctx.shadowColor = SHADOW_COLOR;
-
-      // Círculo de fondo
+    for (let b of bubbles) {
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-      ctx.fillStyle = BUBBLE_FILL_COLOR;
+
+      // ✅ Forzar el color de la burbuja justo antes de rellenar
+      ctx.fillStyle = BASE_CONFIG.BUBBLE_FILL_COLOR;
+      ctx.globalAlpha = b.opacity;
       ctx.fill();
-      ctx.strokeStyle = BUBBLE_STROKE_COLOR;
       ctx.stroke();
 
-      // Dibujar Logo centrado
+      // Logo
       if (b.img.complete) {
-        const iconSize = b.radius * ICON_SIZE_FACTOR;
+        const iconSize = b.radius * BASE_CONFIG.ICON_SIZE_FACTOR;
         ctx.drawImage(
           b.img,
           b.x - iconSize / 2,
@@ -465,60 +415,49 @@
         );
       }
 
-      // --- DIBUJAR TEXTO SOLO SI CORRESPONDE ---
-      let displayText: string | null = null;
-      let textColor = TEXT_CONFIG.colorLoading;
-
+      // Texto de porcentaje (solo si no es stablecoin)
       if (!stablecoins.has(b.coinName)) {
         const coinPrice = priceData[b.coinName];
+        let displayText = null;
+        let textColor = BASE_CONFIG.TEXT_CONFIG.colorLoading;
         if (coinPrice) {
-          if (coinPrice.loading) {
-            displayText = "...";
-          } else if (!coinPrice.error && coinPrice.change24h !== null) {
+          if (coinPrice.loading) displayText = "...";
+          else if (!coinPrice.error && coinPrice.change24h !== null) {
             const change = coinPrice.change24h;
             displayText = `${change > 0 ? "+" : ""}${change.toFixed(2)}%`;
             textColor =
               change >= 0
-                ? TEXT_CONFIG.colorPositive
-                : TEXT_CONFIG.colorNegative;
+                ? BASE_CONFIG.TEXT_CONFIG.colorPositive
+                : BASE_CONFIG.TEXT_CONFIG.colorNegative;
           }
-          // Si tiene error o no hay datos, no se muestra nada
+        }
+        if (displayText) {
+          const fontSize = b.radius * BASE_CONFIG.TEXT_CONFIG.fontSizeFactor;
+          ctx.font = `${BASE_CONFIG.TEXT_CONFIG.fontWeight} ${fontSize}px 'Inter', 'Segoe UI', sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          if (!isMobile) {
+            ctx.shadowBlur = 2;
+            ctx.shadowColor = "rgba(0,0,0,0.5)";
+          } else {
+            ctx.shadowBlur = 0;
+          }
+          ctx.fillStyle = textColor;
+          const textY = b.y + b.radius * BASE_CONFIG.TEXT_CONFIG.offsetY;
+          ctx.fillText(displayText, b.x, textY);
         }
       }
+    }
 
-      if (displayText) {
-        const fontSize = b.radius * TEXT_CONFIG.fontSizeFactor;
-        ctx.font = `${TEXT_CONFIG.fontWeight} ${fontSize}px 'Inter', 'Segoe UI', system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-        ctx.fillStyle = textColor;
-
-        const textY = b.y + b.radius * TEXT_CONFIG.offsetY;
-        ctx.fillText(displayText, b.x, textY);
-      }
-
-      ctx.restore();
-    });
-
+    // Restaurar sombra y alpha para el siguiente frame
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
     requestAnimationFrame(draw);
   }
 
-  // Iniciar carga de imágenes (luego llama a init)
   loadImages();
-
-  // Eventos
-  window.addEventListener("resize", () => {
-    init();
-  });
-
-  // Actualizar precios cada hora (configurable)
-  setInterval(fetchPriceChanges, PRICE_UPDATE_INTERVAL);
-
-  // También actualizar cuando la ventana recupere el foco
+  window.addEventListener("resize", () => init());
+  setInterval(fetchPriceChanges, BASE_CONFIG.PRICE_UPDATE_INTERVAL);
   window.addEventListener("focus", fetchPriceChanges);
-
-  // Iniciar animación (draw se llama recursivamente)
-  draw();
+  requestAnimationFrame(draw);
 </script>
