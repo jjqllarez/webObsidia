@@ -1,0 +1,22 @@
+---
+// src/pages/index.astro
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Hero from "../components/Hero.astro";
+import Dashboard from "../components/Dashboard.astro";
+import Services from "../components/Services.astro";
+import About from "../components/About.astro";
+---
+
+<Layout title="Proxima - Data Tracking">
+  <div class="gradient-bg"></div>
+  <Header />
+  <main class="pt-20">
+    <!-- Añade padding-top para evitar que el header fijo tape el contenido -->
+    <Hero />
+    <Dashboard />
+    <Services />
+    <About />
+    <!-- Sección About añadida -->
+  </main>
+</Layout>

@@ -1,0 +1,60 @@
+---
+// src/layouts/Layout.astro
+//import SwirlBackground from "../components/SwirlBackground.astro";
+import CandleBackground from "../components/CandleBackground.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta
+      name="description"
+      content="Obsidia - Terminal de señales de trading de criptomonedas"
+    />
+
+    <title>{title}</title>
+    <script src="https://telegram.org/js/telegram-web-app.js" is:inline
+    ></script>
+  </head>
+  <body
+    class="bg-[#050505] text-white min-h-screen overflow-x-hidden font-['Inter']"
+  >
+    <CandleBackground />
+
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+  @import "tailwindcss";
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  /* Personalización del scrollbar para que combine con la estética oscura */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2d1b4e;
+    border-radius: 10px;
+  }
+</style>

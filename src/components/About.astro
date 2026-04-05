@@ -1,0 +1,161 @@
+<section id="about" class="about-section">
+  <div class="container">
+    <div class="header-section">
+      <h2 class="section-title">
+        About <span class="gradient-text">Obsidia</span>
+      </h2>
+      <p class="quote-text">
+        "Driven by the need for a fairer, more efficient trading landscape. We
+        execute based on verifiable statistical data."
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="card">
+        <div class="icon-wrapper">
+          <svg
+            class="w-7 h-7 text-purple-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <h3>High-Frequency Execution</h3>
+        <p>
+          Ultra-low latency infrastructure engineered to identify institutional
+          patterns in milliseconds.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon-wrapper">
+          <svg
+            class="w-7 h-7 text-indigo-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            ></path>
+          </svg>
+        </div>
+        <h3>AI Risk Management</h3>
+        <p>
+          Deep learning algorithms safeguard capital by dynamically adjusting
+          leverage based on volatility.
+        </p>
+      </div>
+    </div>
+
+    <div class="innovation-footer">
+      <div class="line"></div>
+      <span>Innovation Engine</span>
+      <div class="line"></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about-section {
+    padding: 60px 5%;
+    background: transparent; /* Permite ver las velas del fondo */
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .section-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #a855f7, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .quote-text {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto 50px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 30px;
+    border-radius: 20px;
+    transition: 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: rgba(168, 85, 247, 0.4);
+    transform: translateY(-5px);
+  }
+
+  .icon-wrapper {
+    background: rgba(168, 85, 247, 0.1);
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .card p {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.5;
+  }
+
+  .innovation-footer {
+    margin-top: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    opacity: 0.2;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+  }
+
+  .line {
+    height: 1px;
+    width: 50px;
+    background: white;
+  }
+</style>

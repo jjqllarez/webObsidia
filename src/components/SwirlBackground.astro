@@ -1,0 +1,82 @@
+---
+// src/components/SwirlBackground.astro
+---
+
+<canvas id="canvas" class="fixed top-0 left-0 -z-10 w-full h-full bg-[#050505]"
+></canvas>
+
+<script>
+  import { createNoise3D } from "simplex-noise";
+
+  // Seleccionamos el canvas y aseguramos el tipo para evitar errores de TypeScript
+  const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+  const ctx = canvas?.getContext("2d");
+  const noise3D = createNoise3D();
+
+  // Definimos tipos básicos para las variables globales del script
+  let w: number, h: number;
+  let particles: any[] = [];
+
+  const particleCount = 1000;
+  const noiseSteps = 39;
+  const baseSpeed = 3;
+
+  function init() {
+    // Verificamos que el canvas y el contexto existan antes de operar
+    if (!canvas || !ctx) return;
+
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    particles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: 0,
+        vy: 0,
+        hue: 260 + Math.random() * 40, // Tonos morados para Obsidia
+      });
+    }
+  }
+
+  function draw() {
+    if (!ctx) return;
+
+    // Efecto de rastro (estela) para el fondo oscuro de Obsidia
+    ctx.fillStyle = "rgba(5, 5, 5, 0.05)";
+    ctx.fillRect(0, 0, w, h);
+
+    particles.forEach((p) => {
+      const noise = noise3D(p.x / 400, p.y / 400, Date.now() / 10000);
+      const angle = noise * Math.PI * noiseSteps;
+
+      p.vx = Math.cos(angle) * baseSpeed;
+      p.vy = Math.sin(angle) * baseSpeed;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Reset de posición si la partícula sale de los bordes
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+
+      // Dibujado de la partícula con brillo suave
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${p.hue}, 80%, 55%, 0.6)`;
+      ctx.arc(p.x, p.y, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  // Escuchamos el cambio de tamaño de ventana para ajustar el fondo
+  window.addEventListener("resize", init);
+
+  // Iniciamos la animación
+  init();
+  draw();
+</script>

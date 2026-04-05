@@ -1,0 +1,154 @@
+---
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  import.meta.env.SUPABASE_URL,
+  import.meta.env.SUPABASE_ANON_KEY,
+);
+
+const { data: stats } = await supabase
+  .from("trading_metrics")
+  .select("*")
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .single();
+
+const currentStats = stats || {
+  total_profit: 0,
+  win_rate: 0,
+  drawdown: 0,
+  active_orders: 0,
+  bot_status: "offline",
+};
+---
+
+<section class="dashboard-wrapper">
+  <div class="glass-card">
+    <div class="dashboard-header">
+      <div class="status-group">
+        <div
+          class={`dot ${currentStats.bot_status === "active" ? "bg-green" : "bg-orange"}`}
+        >
+        </div>
+        <span class="title">LIVE TERMINAL / ALGORITHMIC METRICS</span>
+      </div>
+      <div class="api-status">
+        Status: <span class="text-green">Connected to WEEX API</span>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="stat-box">
+        <label>Total Profit (P&L)</label>
+        <div class="value text-green">
+          +${Number(currentStats.total_profit).toLocaleString()}
+        </div>
+        <span class="sub">Snapshot Data</span>
+      </div>
+
+      <div class="stat-box">
+        <label>Win Rate</label>
+        <div class="value">{currentStats.win_rate}%</div>
+        <span class="sub">Above Average</span>
+      </div>
+
+      <div class="stat-box">
+        <label>Drawdown Max.</label>
+        <div class="value text-red">{currentStats.drawdown}%</div>
+        <span class="sub">Low Risk Profile</span>
+      </div>
+
+      <div class="stat-box">
+        <label>Active Orders</label>
+        <div class="value">{currentStats.active_orders}</div>
+        <span class="sub">Live Positions</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .dashboard-wrapper {
+    position: relative;
+    z-index: 10; /* Esto lo pone por encima del fondo */
+    padding: 2rem;
+    max-width: 1100px;
+    margin: -50px auto 0; /* Sube un poco para integrarse */
+  }
+
+  .glass-card {
+    background: rgba(
+      10,
+      10,
+      10,
+      0.8
+    ); /* Fondo oscuro sólido pero con algo de transparencia */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .bg-green {
+    background: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
+  }
+  .bg-orange {
+    background: #f59e0b;
+  }
+
+  .title {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .stat-box label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    display: block;
+  }
+  .value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 5px 0;
+  }
+  .sub {
+    font-size: 0.65rem;
+    font-style: italic;
+    opacity: 0.5;
+  }
+
+  .text-green {
+    color: #22c55e;
+  }
+  .text-red {
+    color: #ef4444;
+  }
+</style>

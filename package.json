@@ -1,0 +1,19 @@
+{
+  "name": "webobsidia",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@supabase/supabase-js": "^2.101.1",
+    "@tailwindcss/vite": "^4.2.1",
+    "astro": "^5.17.1",
+    "simplex-noise": "^4.0.3",
+    "tailwindcss": "^4.2.1"
+  }
+}

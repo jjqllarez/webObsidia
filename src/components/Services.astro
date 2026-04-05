@@ -1,0 +1,171 @@
+---
+// src/components/Services.astro
+---
+
+<section id="services" class="services-section">
+  <div class="container">
+    <div class="section-header">
+      <div class="status-badge flex items-center gap-2"></div>
+      <h2 class="section-title">Ecosystem Tools</h2>
+      <p class="section-subtitle">Core automation for the modern trader.</p>
+    </div>
+
+    <div class="services-duo-grid">
+      <div class="service-card live">
+        <div class="card-glow"></div>
+        <div class="card-content">
+          <div class="icon-header">
+            <div class="icon">⚡</div>
+            <span class="status-tag text-green-400">● LIVE</span>
+          </div>
+          <h3>Signals Bot</h3>
+          <p>
+            Real-time alerts for Futures (BTC/ETH) with institutional TP/SL
+            levels.
+          </p>
+          <div class="platforms">
+            <span class="mini-badge">Binance</span>
+            <span class="mini-badge">WEEX API</span>
+          </div>
+          <a href="https://t.me/tu_bot" class="btn-glow">Connect Now</a>
+        </div>
+      </div>
+
+      <div class="service-card building">
+        <div class="card-glow"></div>
+        <div class="card-content">
+          <div class="icon-header">
+            <div class="icon">🧠</div>
+            <span class="status-tag text-purple-400">● BUILDING</span>
+          </div>
+          <h3>Meme Sniper</h3>
+          <p>Neural networks detecting liquidity on Solana in milliseconds.</p>
+          <div class="platforms">
+            <span class="mini-badge">Solana</span>
+            <span class="mini-badge">Raydium</span>
+          </div>
+          <button class="btn-disabled" disabled>Waitlist</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .services-section {
+    padding: 60px 5%; /* Reducido de 120px para ahorrar espacio */
+    background: transparent;
+    position: relative;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 40px; /* Reducido de 70px */
+  }
+
+  .section-title {
+    font-size: 2rem; /* Reducido de 2.8rem para que no "empuje" el contenido */
+    font-weight: 900;
+    margin: 10px 0;
+    background: linear-gradient(to right, #fff, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+  }
+
+  .section-subtitle {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+  }
+
+  .services-duo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .service-card {
+    background: rgba(15, 15, 15, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 18px;
+    padding: 30px; /* Reducido de 40px */
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  .icon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  .icon {
+    font-size: 2.2rem;
+  }
+  .status-tag {
+    font-size: 0.6rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .platforms {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 25px;
+  }
+
+  .mini-badge {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+  }
+
+  .btn-glow {
+    display: block;
+    text-align: center;
+    background: #a855f7;
+    color: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-decoration: none;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+  }
+
+  .btn-disabled {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.2);
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 640px) {
+    .section-title {
+      font-size: 1.6rem;
+    }
+  }
+</style>
