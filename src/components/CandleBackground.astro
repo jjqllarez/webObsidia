@@ -16,8 +16,8 @@
 
   // --- IMAGEN DE FONDO ---
   const BACKGROUND_IMAGE_ENABLED = true; // true para mostrar imagen, false para fondo negro sólido
-  const BACKGROUND_IMAGE_PATH = "/fondo.png"; // Ruta a la imagen en la carpeta public (ej: '/fondo.png')
-  const BACKGROUND_IMAGE_OPACITY = 0.10; // Opacidad de la imagen (0 = transparente, 1 = opaca)
+  const BACKGROUND_IMAGE_PATH = `${import.meta.env.BASE_URL}/fondo.png`; // ✅ Ruta dinámica con BASE_URL
+  const BACKGROUND_IMAGE_OPACITY = 0.1; // Opacidad de la imagen (0 = transparente, 1 = opaca)
 
   // --- CANTIDAD Y TAMAÑO DE BURBUJAS ---
   const BUBBLE_COUNT = 20; // Número de burbujas (max 20 si hay suficientes iconos)

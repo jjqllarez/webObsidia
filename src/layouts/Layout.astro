@@ -1,6 +1,5 @@
 ---
 // src/layouts/Layout.astro
-//import SwirlBackground from "../components/SwirlBackground.astro";
 import CandleBackground from "../components/CandleBackground.astro";
 
 interface Props {
@@ -8,6 +7,7 @@ interface Props {
 }
 
 const { title } = Astro.props;
+const base = import.meta.env.BASE_URL;
 ---
 
 <!doctype html>
@@ -23,6 +23,11 @@ const { title } = Astro.props;
       content="Obsidia - Terminal de señales de trading de criptomonedas"
     />
 
+    <!-- ✅ Favicon con BASE_URL -->
+    <link rel="icon" type="image/x-icon" href={`${base}/favicon.ico`} />
+    <!-- Si también tienes un favicon en SVG, puedes agregar: -->
+    <!-- <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} /> -->
+
     <title>{title}</title>
     <script src="https://telegram.org/js/telegram-web-app.js" is:inline
     ></script>
@@ -31,7 +36,6 @@ const { title } = Astro.props;
     class="bg-[#050505] text-white min-h-screen overflow-x-hidden font-['Inter']"
   >
     <CandleBackground />
-
     <slot />
   </body>
 </html>
@@ -46,7 +50,6 @@ const { title } = Astro.props;
     box-sizing: border-box;
   }
 
-  /* Personalización del scrollbar para que combine con la estética oscura */
   ::-webkit-scrollbar {
     width: 6px;
   }
