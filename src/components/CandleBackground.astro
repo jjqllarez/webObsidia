@@ -11,6 +11,12 @@
   const ctx = canvas?.getContext("2d");
 
   // ===================================================================
+  // VARIABLES DE CONTROL PARA MÓVIL (CAMBIA AQUÍ SI QUIERES OCULTAR ALGO)
+  // ===================================================================
+  const SHOW_BUBBLES_ON_MOBILE = false; // true = mostrar burbujas en móvil
+  const SHOW_BACKGROUND_ON_MOBILE = true; // true = mostrar fondo en móvil
+
+  // ===================================================================
   // DETECCIÓN DE DISPOSITIVO (MÓVIL/TABLET vs PC)
   // ===================================================================
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
@@ -20,35 +26,39 @@
   console.log(
     `Dispositivo detectado: ${isMobile ? "Móvil/Tablet" : "PC/Desktop"}`,
   );
+  console.log(
+    `Mostrar burbujas en móvil: ${SHOW_BUBBLES_ON_MOBILE ? "Sí" : "No"} | Mostrar fondo en móvil: ${SHOW_BACKGROUND_ON_MOBILE ? "Sí" : "No"}`,
+  );
 
   // ===================================================================
   // PARÁMETROS CONFIGURABLES - AJUSTES AUTOMÁTICOS POR DISPOSITIVO
   // ===================================================================
 
   // --- IMAGEN DE FONDO ---
-  const BACKGROUND_IMAGE_ENABLED = true;
+  // Si es móvil y SHOW_BACKGROUND_ON_MOBILE = false, no se carga ni se dibuja
+  const BACKGROUND_IMAGE_ENABLED = isMobile ? SHOW_BACKGROUND_ON_MOBILE : true;
   const BACKGROUND_IMAGE_PATH = `${import.meta.env.BASE_URL}/fondo.png`;
-  // En móvil reducimos opacidad para mejorar rendimiento
   const BACKGROUND_IMAGE_OPACITY = isMobile ? 0.05 : 0.1;
 
   // --- CANTIDAD Y TAMAÑO DE BURBUJAS ---
-  // En móvil: máximo 8 burbujas, en PC: 20
-  const BUBBLE_COUNT = isMobile ? 8 : 20;
-  const MIN_RADIUS = isMobile ? 20 : 25; // Más pequeñas en móvil
+  // Si es móvil y SHOW_BUBBLES_ON_MOBILE = false, ponemos 0 burbujas
+  const BUBBLE_COUNT = (() => {
+    if (isMobile) {
+      return SHOW_BUBBLES_ON_MOBILE ? 8 : 0;
+    }
+    return 20;
+  })();
+  const MIN_RADIUS = isMobile ? 20 : 25;
   const MAX_RADIUS = isMobile ? 40 : 50;
 
   // --- VELOCIDAD Y MOVIMIENTO ---
-  // En móvil reducimos velocidad para menos cálculos de colisión
   const SPEED_FACTOR = isMobile ? 1 : 2;
-  // En móvil solo 1 iteración de colisión (vs 3 en PC)
   const COLLISION_ITERATIONS = isMobile ? 1 : 3;
 
   // --- ASPECTO VISUAL (BURBUJAS) ---
-  // En móvil reducimos opacidad y eliminamos sombras pesadas
   const BUBBLE_OPACITY = isMobile ? 0.2 : 0.3;
   const BUBBLE_FILL_COLOR = "rgba(20, 20, 30, 0.8)";
   const BUBBLE_STROKE_COLOR = "rgba(255, 255, 255, 0.1)";
-  // En móvil: sin sombra (0), en PC: 15
   const SHADOW_BLUR = isMobile ? 0 : 15;
   const SHADOW_COLOR = "rgba(120, 50, 255, 0.3)";
 
@@ -66,12 +76,10 @@
   };
 
   // --- ACTUALIZACIÓN DE PRECIOS ---
-  // En móvil actualizamos cada 2 horas (ahorro de batería/datos)
   const PRICE_UPDATE_INTERVAL = isMobile ? 7200000 : 3600000;
   const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
 
   // --- OPTIMIZACIONES ADICIONALES PARA MÓVIL ---
-  // Reducir FPS en móvil usando throttle
   const TARGET_FPS = isMobile ? 30 : 60;
   const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
@@ -84,14 +92,14 @@
   let backgroundImage: HTMLImageElement | null = null;
   let lastFrameTime = 0;
 
-  // Cargar imagen de fondo
+  // Cargar imagen de fondo solo si está habilitada
   if (BACKGROUND_IMAGE_ENABLED) {
     backgroundImage = new Image();
     backgroundImage.src = BACKGROUND_IMAGE_PATH;
     backgroundImage.crossOrigin = "anonymous";
   }
 
-  // Lista de criptomonedas (recortada si es móvil para ahorrar memoria)
+  // Lista de criptomonedas
   const allCryptoIcons = [
     {
       name: "BTC",
@@ -159,7 +167,6 @@
     },
   ];
 
-  // En móvil usamos menos iconos para reducir carga de red/memoria
   const cryptoIcons = isMobile ? allCryptoIcons.slice(0, 10) : allCryptoIcons;
 
   const stablecoins = new Set(["USDT", "USDC", "DAI", "BUSD"]);
@@ -198,10 +205,7 @@
       return new Promise<HTMLImageElement | null>((resolve) => {
         const img = new Image();
         img.src = icon.url;
-        // En móvil no forzamos carga sincrónica pesada
-        if (isMobile) {
-          img.loading = "lazy";
-        }
+        if (isMobile) img.loading = "lazy";
         img.onload = () => resolve(img);
         img.onerror = () => resolve(null);
       });
@@ -230,6 +234,13 @@
     w = canvas.width = window.innerWidth;
     h = canvas.height = window.innerHeight;
     bubbles = [];
+
+    // Si BUBBLE_COUNT es 0, no creamos burbujas
+    if (BUBBLE_COUNT === 0) {
+      console.log("Burbujas desactivadas en móvil.");
+      fetchPriceChanges(); // Aún podemos actualizar precios aunque no se muestren
+      return;
+    }
 
     const availableCount = Math.min(BUBBLE_COUNT, validImages.length);
     if (availableCount === 0) {
@@ -328,7 +339,6 @@
           const minDist = b1.radius + b2.radius;
 
           if (dist < minDist && dist > 0) {
-            // Evitar división por cero
             const m1 = b1.radius * b1.radius;
             const m2 = b2.radius * b2.radius;
             const totalMass = m1 + m2;
@@ -361,7 +371,6 @@
     }
   }
 
-  // Variable para control de FPS en móvil
   let animationId: number;
 
   function draw(currentTime: number) {
@@ -379,7 +388,7 @@
 
     ctx.clearRect(0, 0, w, h);
 
-    // Dibujar imagen de fondo
+    // Dibujar imagen de fondo (solo si está habilitada y cargada)
     if (
       BACKGROUND_IMAGE_ENABLED &&
       backgroundImage &&
@@ -392,6 +401,12 @@
     } else {
       ctx.fillStyle = "#010101";
       ctx.fillRect(0, 0, w, h);
+    }
+
+    // Si no hay burbujas, saltamos el resto
+    if (bubbles.length === 0) {
+      animationId = requestAnimationFrame(draw);
+      return;
     }
 
     // Actualizar posiciones
@@ -425,13 +440,11 @@
       ctx.save();
       ctx.globalAlpha = b.opacity;
 
-      // Solo aplicar sombra en PC (en móvil SHADOW_BLUR es 0)
       if (SHADOW_BLUR > 0) {
         ctx.shadowBlur = SHADOW_BLUR;
         ctx.shadowColor = SHADOW_COLOR;
       }
 
-      // Círculo de fondo
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
       ctx.fillStyle = BUBBLE_FILL_COLOR;
@@ -439,7 +452,6 @@
       ctx.strokeStyle = BUBBLE_STROKE_COLOR;
       ctx.stroke();
 
-      // Dibujar Logo
       if (b.img.complete) {
         const iconSize = b.radius * ICON_SIZE_FACTOR;
         ctx.drawImage(
@@ -451,7 +463,6 @@
         );
       }
 
-      // Dibujar texto de porcentaje
       let displayText: string | null = null;
       let textColor = TEXT_CONFIG.colorLoading;
 
@@ -477,7 +488,6 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // En móvil simplificamos sombra de texto
         if (!isMobile) {
           ctx.shadowBlur = 8;
           ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
@@ -497,9 +507,7 @@
   // Iniciar
   loadImages();
 
-  // Eventos
   window.addEventListener("resize", () => {
-    // Debounce resize en móvil para evitar recálculos excesivos
     if (isMobile) {
       clearTimeout((window as any).resizeTimeout);
       (window as any).resizeTimeout = setTimeout(init, 250);
@@ -511,6 +519,5 @@
   setInterval(fetchPriceChanges, PRICE_UPDATE_INTERVAL);
   window.addEventListener("focus", fetchPriceChanges);
 
-  // Iniciar animación
   draw(0);
 </script>

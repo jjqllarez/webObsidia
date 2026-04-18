@@ -101,3 +101,17 @@
     box-shadow: 0 15px 40px rgba(139, 92, 246, 0.4);
   }
 </style>
+
+<script>
+  // Abrir enlace de Telegram al hacer clic en el botón "JOIN NOW"
+  document.addEventListener("DOMContentLoaded", () => {
+    const joinButton =
+      document.querySelector<HTMLButtonElement>(".btn-primary");
+    if (joinButton && joinButton.textContent?.trim() === "JOIN NOW") {
+      joinButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        window.open("https://t.me/Obsidia_Labs", "_blank");
+      });
+    }
+  });
+</script>
