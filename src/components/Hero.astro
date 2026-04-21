@@ -15,10 +15,21 @@
     </p>
 
     <button class="btn-primary">JOIN NOW</button>
+
+    <a
+      href="https://www.weex.com/en/register?vipCode=ab6t"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="weex-link"
+    >
+      <span>Trade with us</span>
+      <img src="/weex.svg" alt="WEEX Logo" class="weex-logo" />
+    </a>
   </div>
 </section>
 
 <style>
+  /* ... Tus estilos anteriores se mantienen igual ... */
   .hero {
     padding: 10rem 5% 5rem;
     text-align: center;
@@ -33,37 +44,36 @@
     gap: 2rem;
   }
 
-  .badge {
-    display: inline-flex;
+  /* Estilos específicos para el nuevo enlace */
+  .weex-link {
+    display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50px;
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.8);
-    cursor: pointer;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    font-weight: 500;
     transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    border: 1px solid transparent;
   }
 
-  .badge:hover {
-    background: rgba(255, 255, 255, 0.1);
+  .weex-link:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(139, 92, 246, 0.3);
     transform: translateY(-2px);
   }
 
-  .badge-new {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    padding: 0.2rem 0.6rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
+  .weex-logo {
+    height: 24px; /* Ajusta según el tamaño de tu SVG */
+    width: auto;
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
   }
 
-  .arrow {
-    font-size: 1rem;
-  }
-
+  /* ... El resto de tus estilos (.hero-title, .btn-primary, etc.) ... */
   .hero-title {
     font-size: clamp(2.5rem, 6vw, 4.5rem);
     font-weight: 700;
@@ -103,7 +113,6 @@
 </style>
 
 <script>
-  // Abrir enlace de Telegram al hacer clic en el botón "JOIN NOW"
   document.addEventListener("DOMContentLoaded", () => {
     const joinButton =
       document.querySelector<HTMLButtonElement>(".btn-primary");
